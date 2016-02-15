@@ -4,17 +4,20 @@ import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.util.Date;
+import java.util.HashSet;
 import java.util.List;
-import java.util.zip.DataFormatException;
+import java.util.Set;
 
 /**
  * Created by dirkhovy on 2/15/16.
  */
 public class MsgProcessor {
+    Set<Integer> paragraphHashes = new HashSet<>();
 
     public MsgProcessor(){
 
     }
+
 
 
     /**
@@ -26,9 +29,14 @@ public class MsgProcessor {
     public ProcessedMsg process(List<Field> fields, String bodyText) {
         ProcessedMsg msg = new ProcessedMsg();
         extractFields(msg, fields);
+        extractBody(bodyText);
+
 
         return msg;
 
+    }
+
+    private void extractBody(String bodyText) {
     }
 
     /**
@@ -38,7 +46,7 @@ public class MsgProcessor {
      * @return true iff we can process the whole thing
      * @throws DateTimeParseException if the date is not parseable
      */
-    private boolean extractFields(ProcessedMsg msg, List<Field> fields) throws DateTimeParseException{
+    private boolean extractFields(ProcessedMsg msg, List<Field> fields) throws DateTimeParseException {
         for (Field field : fields) {
             switch (field.getName()) {
                 case "From":
@@ -47,10 +55,13 @@ public class MsgProcessor {
                     break;
                 case "Date":
                     msg.date = extractDate(field.getBody());
+                    break;
                 case "Newsgroups":
                     break;
                 case "Reply-To":
                     break;
+
+
 
             }
         }
