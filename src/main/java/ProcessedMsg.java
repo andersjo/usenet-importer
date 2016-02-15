@@ -7,7 +7,8 @@ import java.util.StringJoiner;
  */
 public class ProcessedMsg {
     private static final String SEPARATOR = "\t";
-    private static final String ENCAPSULATOR = "\t";
+    private static final String ENCAPSULATOR = "\"";
+    private static final String DOUBLE_ENCAPSULATOR = ENCAPSULATOR + ENCAPSULATOR;
 
     public String msgID;
     public String senderName;
@@ -26,10 +27,18 @@ public class ProcessedMsg {
 
     /**
      *
-     * @return
+     * @return a concatenation of the fields, joined by SEPARATOR
      */
     public String toCSV(){
         StringJoiner elements = new StringJoiner(SEPARATOR);
+
+        // assemble fields
+        //***************************
+        //*******   WARNING:   ******
+        //***************************
+        // if you change the order or add fields,
+        // change getCSVHeader() as well!
+
         elements.add(msgID);
         elements.add(senderName);
         elements.add(senderEmail);
@@ -42,12 +51,35 @@ public class ProcessedMsg {
         return elements.toString();
     }
 
-    //TODO: do we need a header() function to get the names of the CSV fields
+    /**
+     * function to get the names of the CSV fields
+     * @return
+     */
+    public String getCSVHeader(){
+        StringJoiner elements = new StringJoiner(SEPARATOR);
+
+        // assemble fields
+        //***************************
+        //*******   WARNING:   ******
+        //***************************
+        // if you change the order or add fields,
+        // change toCSV() as well!
+        elements.add("msgID");
+        elements.add("senderName");
+        elements.add("senderEmail");
+        elements.add("subject");
+        elements.add("langID");
+        elements.add("newsgroups");
+        elements.add("paragraphs");
+        elements.add("date");
+
+        return elements.toString();
+    }
 
     /**
-     * join a list with SEPARATOR and encapsulate it with ENCAPUSLATOR
+     * join a list with SEPARATOR and encapsulate it with ENCAPSULATOR
      * @param someList
-     * @return
+     * @return escaped and joined list
      */
     private String concatenate(List<String> someList){
         StringJoiner elements = new StringJoiner(SEPARATOR, ENCAPSULATOR, ENCAPSULATOR);
@@ -56,8 +88,10 @@ public class ProcessedMsg {
             elements.add(element);
         }
 
-        // TODO: escape ENCAPSULATOR string in elements!
-        return elements.toString();
+        // replace the ENCAPSULATOR with a double version, after splitting up existing double versions
+        String result = elements.toString().replaceAll(DOUBLE_ENCAPSULATOR, ENCAPSULATOR + " " + ENCAPSULATOR).replaceAll(ENCAPSULATOR, DOUBLE_ENCAPSULATOR);
+
+        return result;
 
     }
 }
