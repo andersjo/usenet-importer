@@ -8,13 +8,16 @@ import org.apache.james.mime4j.stream.Field;
 
 import java.io.IOException;
 import java.io.InputStream;
-
-import static org.apache.james.mime4j.util.MimeUtil.unfold;
+import java.util.ArrayList;
+import java.util.List;
 
 
 public class MboxHandler implements ContentHandler {
     int numMessages = 0;
     int numBodies = 0;
+    String body = "";
+    List<Field> rawFields = new ArrayList<>();
+
 
     public int getNumMessages() {
         return numMessages;
@@ -27,7 +30,8 @@ public class MboxHandler implements ContentHandler {
 
     @Override
     public void startMessage() throws MimeException {
-        numMessages += 1;
+        body = "";
+        rawFields.clear();
     }
 
     @Override
@@ -52,7 +56,7 @@ public class MboxHandler implements ContentHandler {
 
     @Override
     public void field(Field rawField) throws MimeException {
-//        System.out.println(rawField.getName());
+        rawFields.add(rawField);
     }
 
     @Override
@@ -83,20 +87,9 @@ public class MboxHandler implements ContentHandler {
     @Override
     public void body(BodyDescriptor bd, InputStream is) throws MimeException, IOException {
         if (bd.getMimeType().equals("text/plain")) {
-
-
-            processBody("");
-            numBodies += 1;
+            body += is.toString();
+            System.out.println(body.length());
         }
-
-
-//        System.out.println("body: " + bd.getMimeType());
-    }
-
-    private void processBody(String body) {
-
-
-
     }
 
     @Override

@@ -1,3 +1,5 @@
+import org.apache.james.mime4j.stream.Field;
+
 import java.util.Date;
 import java.util.List;
 
@@ -9,8 +11,40 @@ public class MsgProcessor {
     public MsgProcessor(){}
 
 
-    public ProcessedMsg process(String sender, String name, String email, String subject, List<String> newsgroups, List<String> paragraphs, Date date){
-        ProcessedMsg processedMsg = new ProcessedMsg(sender, name, email, subject, newsgroups, paragraphs, date);
-        return processedMsg;
+    public ProcessedMsg process(List<Field> fields, String bodyText) {
+        ProcessedMsg msg = new ProcessedMsg();
+        extractFields(msg, fields);
+
+
+
+
+
+        return msg;
+
     }
+
+    private boolean extractFields(ProcessedMsg msg, List<Field> fields) {
+        for (Field field : fields) {
+            switch (field.getName()) {
+                case "From":
+                    break;
+                case "Subject":
+                    break;
+                case "Date":
+                    break;
+                case "Newsgroups":
+                    break;
+                case "Reply-To":
+                    break;
+
+
+
+            }
+        }
+
+        return true;
+
+    }
+
+
 }

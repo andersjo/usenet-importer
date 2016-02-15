@@ -33,10 +33,11 @@ public class ParseMbox {
             while (true) {
                 String line = scanner.nextLine();
                 if (line.startsWith("From ")) {
-                    if (!parseMessage(instream, parser)) {
+                    if (parseMessage(instream, parser)) {
+
+                    } else {
                         break;
                     }
-
                 }
             }
         } catch (NoSuchElementException e) {
