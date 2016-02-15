@@ -12,7 +12,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 
-public class MboxHandler implements ContentHandler {
+public class MboxContentHandler implements ContentHandler {
     String body = "";
     List<Field> rawFields = new ArrayList<>();
 
@@ -66,7 +66,7 @@ public class MboxHandler implements ContentHandler {
 
     @Override
     public void startMultipart(BodyDescriptor bd) throws MimeException {
-        System.out.println("multipart:" + bd.getMimeType());
+
     }
 
     @Override
@@ -78,7 +78,6 @@ public class MboxHandler implements ContentHandler {
     public void body(BodyDescriptor bd, InputStream is) throws MimeException, IOException {
         if (bd.getMimeType().equals("text/plain")) {
             body += is.toString();
-            System.out.println(body.length());
         }
     }
 

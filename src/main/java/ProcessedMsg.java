@@ -1,4 +1,5 @@
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.StringJoiner;
 
@@ -15,14 +16,20 @@ public class ProcessedMsg {
     public String senderEmail;
     public String subject;
     public String langID;
-    public List<String> newsgroups;
-    public List<String> paragraphs;
+    public List<String> newsgroups = new ArrayList<>();
+    public List<String> paragraphs = new ArrayList<>();
     public LocalDate date;
 
     /**
      * empty constructor, elements are filled from outside. No setters (oooh!)
      */
     public ProcessedMsg() {}
+
+    public boolean isValid() {
+        return paragraphs.size() >= 1;
+    }
+
+
 
 
     /**
@@ -81,7 +88,7 @@ public class ProcessedMsg {
      * @param someList
      * @return escaped and joined list
      */
-    private String concatenate(List<String> someList){
+    private static String concatenate(List<String> someList){
         StringJoiner elements = new StringJoiner(SEPARATOR, ENCAPSULATOR, ENCAPSULATOR);
 
         for (String element: someList){

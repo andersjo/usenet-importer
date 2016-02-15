@@ -28,6 +28,7 @@ public class TextUtil {
     }
 
 
+
     public static List<String> stripQuotes(List<String> lines) {
         boolean prevIsQuote = false;
         boolean currentIsQuote = false;
@@ -47,7 +48,6 @@ public class TextUtil {
                 if (prevLine.length() - quoteIndent + line.length() <= 76) {
                     currentIsQuote = true;
                 }
-
             }
 
             prevIsQuote = currentIsQuote;
