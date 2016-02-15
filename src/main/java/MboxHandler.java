@@ -13,19 +13,9 @@ import java.util.List;
 
 
 public class MboxHandler implements ContentHandler {
-    int numMessages = 0;
-    int numBodies = 0;
     String body = "";
     List<Field> rawFields = new ArrayList<>();
 
-
-    public int getNumMessages() {
-        return numMessages;
-    }
-
-    public int getNumBodies() {
-        return numBodies;
-    }
 
 
     @Override
