@@ -16,8 +16,6 @@ public class MboxContentHandler implements ContentHandler {
     String body = "";
     List<Field> rawFields = new ArrayList<>();
 
-
-
     @Override
     public void startMessage() throws MimeException {
         body = "";

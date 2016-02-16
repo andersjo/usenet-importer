@@ -1,10 +1,17 @@
+import com.sun.org.apache.xpath.internal.operations.Mult;
+import org.apache.james.mime4j.dom.*;
 import org.apache.james.mime4j.dom.address.Address;
 import org.apache.james.mime4j.dom.address.AddressList;
 import org.apache.james.mime4j.dom.address.Mailbox;
 import org.apache.james.mime4j.dom.address.MailboxList;
 import org.apache.james.mime4j.dom.field.AddressListField;
+import org.apache.james.mime4j.message.AbstractMessage;
+import org.apache.james.mime4j.message.MessageImpl;
 import org.apache.james.mime4j.stream.Field;
 
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.io.UnsupportedEncodingException;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
@@ -15,41 +22,84 @@ import java.util.*;
  */
 public class MsgProcessor {
     Set<Integer> paragraphHashes = new HashSet<>();
+    List<String> unknownEncodings = new ArrayList<>();
 
     public MsgProcessor(){
 
     }
 
+    public ProcessedMsg process(Message message) {
+        ProcessedMsg processedMsg = new ProcessedMsg();
+        // extractFields(msg, fields);
+        System.out.println("=================");
+        extractBody(message, processedMsg);
+
+
+        return processedMsg;
+
+
+    }
+
+    private void extractBody(Message message, ProcessedMsg processedMessage) {
+        String body = findFirstPlainBody(message, message.getCharset());
+//        System.out.println("Body: " + body.substring(0, Math.min(100, body.length())));
+
+
+
+//        List<String> stuff = new ArrayList<>();
+    }
 
 
     /**
-     * process the fields from the Stream and the text, and parse it into a ProcessedMsg object
-     * @param fields
-     * @param bodyText
-     * @return ProcessedMsg object
+     * Finds the first plain text body part of the message and decodes that using
+     * either the provided charset or the charset of an embedded part.
+     *
+     * In case the charset is invalided, the method falls back to a safe decoding.
+     *
+     * @return decoded string or null if no plain text part was found
      */
-    public ProcessedMsg process(List<Field> fields, String bodyText) {
-        ProcessedMsg msg = new ProcessedMsg();
+    private String findFirstPlainBody(Body body, String charset) {
+
+        if (body instanceof SingleBody) {
+            SingleBody singleBody = (SingleBody) body;
+            return singleBodyToString(singleBody, charset);
+
+        } else if (body instanceof Message) {
+            Message messageBody = (Message) body;
+            return findFirstPlainBody(messageBody.getBody(), messageBody.getCharset());
+
+        } else if (body instanceof Multipart) {
+            Multipart multipartBody = (Multipart) body;
+            for (Entity entity : multipartBody.getBodyParts()) {
+                if (entity.getMimeType().equals("text/plain")) {
+                    return findFirstPlainBody(entity.getBody(), entity.getCharset());
+                } else if (entity.isMultipart()) {
+                    String foundBody = findFirstPlainBody(entity.getBody(), entity.getCharset());
+                    if (foundBody != null) {
+                        return foundBody;
+                    }
+                }
+            }
+            return null;
+        } else {
+            throw new RuntimeException("Invalid type of body encountered");
+        }
+    }
+
+    private String singleBodyToString(SingleBody singleBody, String charset) {
+        ByteArrayOutputStream output = new ByteArrayOutputStream();
         try {
-            extractFields(msg, fields);
-            extractBody(bodyText);
-        } catch (MessageProcessingError messageProcessingError) {
-//            messageProcessingError.printStackTrace();
+            singleBody.writeTo(output);
+        } catch (IOException e) {
+            e.printStackTrace();
         }
 
-        return msg;
-    }
-
-    public ProcessedMsg process(RawMsg rawMessage)  {
-        System.out.println("=======");
-        System.out.println(rawMessage.body);
-        System.out.println("=======");
-        return process(rawMessage.fields, rawMessage.body);
-    }
-
-    private void extractBody(String bodyText) {
-        List<String> stuff = new ArrayList<>();
-
+        try {
+            return output.toString(charset);
+        } catch (UnsupportedEncodingException e) {
+            unknownEncodings.add(charset);
+            return output.toString();
+        }
     }
 
     /**
