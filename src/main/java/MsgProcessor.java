@@ -1,3 +1,5 @@
+import com.carrotsearch.labs.langid.DetectedLanguage;
+import com.carrotsearch.labs.langid.LangIdV3;
 import com.sun.org.apache.xpath.internal.operations.Mult;
 import org.apache.james.mime4j.dom.*;
 import org.apache.james.mime4j.dom.address.Address;
@@ -8,6 +10,7 @@ import org.apache.james.mime4j.dom.field.AddressListField;
 import org.apache.james.mime4j.message.AbstractMessage;
 import org.apache.james.mime4j.message.MessageImpl;
 import org.apache.james.mime4j.stream.Field;
+import org.apache.james.mime4j.util.MimeUtil;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -16,37 +19,69 @@ import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.util.*;
+import java.util.function.Function;
+import java.util.function.Predicate;
+import java.util.stream.Collector;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
-/**
- * Created by dirkhovy on 2/15/16.
- */
 public class MsgProcessor {
     Set<Integer> paragraphHashes = new HashSet<>();
     List<String> unknownEncodings = new ArrayList<>();
-
+    List<Predicate<String>> paragraphFilters = new ArrayList<>();
+    LangIdV3 langid = new LangIdV3();
     public MsgProcessor(){
 
     }
 
+    public void addParagraphFilter(Predicate<String> function) {
+        paragraphFilters.add(function);
+    }
+
     public ProcessedMsg process(Message message) {
         ProcessedMsg processedMsg = new ProcessedMsg();
-        // extractFields(msg, fields);
-        System.out.println("=================");
-        extractBody(message, processedMsg);
-
+        try {
+            String body = extractBody(message);
+            List<String> paragraphs = TextUtil.findParagraphs(TextUtil.stripQuotes(body));
+            paragraphs = applyParagraphFilters(paragraphs);
+            processedMsg.paragraphs = paragraphs;
+            extractFields(message, processedMsg);
+            processedMsg.langCode = detectLanguage(paragraphs);
+        } catch (MessageProcessingError e) {
+            return null;
+        }
 
         return processedMsg;
 
 
     }
 
-    private void extractBody(Message message, ProcessedMsg processedMessage) {
-        String body = findFirstPlainBody(message, message.getCharset());
-//        System.out.println("Body: " + body.substring(0, Math.min(100, body.length())));
+    private String detectLanguage(List<String> paragraphs) {
+        if (paragraphs.size() == 0)
+            return "unknown";
+
+        try {
+            paragraphs.stream().forEach(langid::append);
+            DetectedLanguage detectedLanguage = langid.classify(false);
+            return detectedLanguage.getLangCode();
+        } finally {
+            langid.reset();
+        }
 
 
+    }
 
-//        List<String> stuff = new ArrayList<>();
+    private List<String> applyParagraphFilters(List<String> paragraphs) {
+        Stream<String> paragraphStream = paragraphs.stream();
+        for (Predicate<String> pred: paragraphFilters) {
+            paragraphStream = paragraphStream.filter(pred);
+        }
+
+        return paragraphStream.collect(Collectors.toList());
+    }
+
+    private String extractBody(Message message) throws MessageProcessingError {
+        return findFirstPlainBody(message, message.getCharset());
     }
 
 
@@ -58,7 +93,7 @@ public class MsgProcessor {
      *
      * @return decoded string or null if no plain text part was found
      */
-    private String findFirstPlainBody(Body body, String charset) {
+    private String findFirstPlainBody(Body body, String charset) throws MessageProcessingError {
 
         if (body instanceof SingleBody) {
             SingleBody singleBody = (SingleBody) body;
@@ -80,9 +115,9 @@ public class MsgProcessor {
                     }
                 }
             }
-            return null;
+            throw new MessageProcessingError("No valid body found");
         } else {
-            throw new RuntimeException("Invalid type of body encountered");
+            throw new MessageProcessingError("No valid body found");
         }
     }
 
@@ -102,75 +137,48 @@ public class MsgProcessor {
         }
     }
 
-    /**
-     * this is where the magic happens
-     * @param msg
-     * @param fields
-     * @return true iff we can process the whole thing
-     * @throws DateTimeParseException if the date is not parseable
-     */
-    private boolean extractFields(ProcessedMsg msg, List<Field> fields) throws MessageProcessingError {
-        for (Field field : fields) {
-            System.out.println(field.getName() + ": " + field.getBody().substring(0, Math.min(field.getBody().length(), 25)));
-            switch (field.getName()) {
-                case "From":
-                    if (field instanceof AddressListField) {
-                        System.out.println("From IS AN AddressListField");
-                        AddressListField addressListField = (AddressListField) field;
-                        MailboxList addressList = addressListField.getAddressList().flatten();
-                        if (addressList.size() > 0) {
-                            Mailbox mailbox = addressList.get(0);
-                            msg.senderEmail = mailbox.getAddress();
-                            msg.senderName = mailbox.getName();
-                        } else {
-                            throw new MessageProcessingError("No valid From address found");
-                        }
-                    } else {
-                        System.out.println("From but not an AddressListField");
-                    }
+    private void extractFields(Message message, ProcessedMsg processedMessage) throws MessageProcessingError {
+        MailboxList fromList = message.getFrom();
 
-                    break;
-                case "Subject":
-                    msg.subject = field.getBody();
-                    break;
-                case "Date":
-//                    msg.date = extractDate(field.getBody());
-                    break;
-                case "Newsgroups":
-                    msg.newsgroups = extractNewsgroups(field.getBody());
-                    break;
-                case "Reply-To":
-                    break;
-
-
-
-            }
+        if (fromList != null && fromList.size() >= 1) {
+            Mailbox from = fromList.get(0);
+            processedMessage.senderName = from.getName();
+            processedMessage.senderEmail = from.getAddress();
         }
 
-        return true;
+        AddressList replyToList = message.getReplyTo();
+        if (replyToList != null && replyToList.size() >= 1) {
+            Address replyTo = message.getReplyTo().get(0);
+            processedMessage.replyTo = replyTo.toString();
+        }
+
+        Mailbox sender = message.getSender();
+        if (sender != null) {
+            if (processedMessage.senderName == null)
+                processedMessage.senderName = sender.getName();
+            if (processedMessage.senderEmail == null)
+                processedMessage.senderEmail = sender.getAddress();
+        }
+
+        processedMessage.subject = message.getSubject();
+        processedMessage.date = message.getDate();
+
+        processedMessage.messageId = message.getMessageId();
+        processedMessage.newsgroups = extractNewsgroups(message);
 
     }
 
-    private List<String> extractNewsgroups(String body) {
-        return Arrays.asList(body.split("."));
-    }
+    private List<String> extractNewsgroups(Message message) {
+        Header header = message.getHeader();
+        List<Field> newsgroupFields = header.getFields("Newsgroups");
+        if (newsgroupFields.size() >= 1) {
+            Field newsgroupField = newsgroupFields.get(0);
 
-    /**
-     * turn a string into a date with a certain format
-     * @param dateString
-     * @throws DateTimeParseException
-     */
-    private LocalDate extractDate(String dateString) throws MessageProcessingError {
-        try {
-            //DateTimeFormatter formatter = DateTimeFormatter.ofPattern("MMM d yyyy");
-            LocalDate date = LocalDate.parse(dateString, DateTimeFormatter.BASIC_ISO_DATE);
-            return date;
+            String newsgroupsList = MimeUtil.unfold(newsgroupField.getBody());
+            return Arrays.asList(newsgroupsList.split(","));
         }
-        catch (DateTimeParseException exc) {
-            String errorMessage = "'" + dateString + "' is not parseable as as date";
-            throw new MessageProcessingError(errorMessage, exc);
-        }
-    }
 
+        return Collections.<String>emptyList();
+    }
 
 }

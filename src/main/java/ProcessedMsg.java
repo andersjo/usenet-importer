@@ -1,11 +1,9 @@
 import java.time.LocalDate;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 import java.util.StringJoiner;
 
-/**
- * Created by dirkhovy on 2/15/16.
- */
 public class ProcessedMsg {
     private static final String SEPARATOR = "\t";
     private static final String ENCAPSULATOR = "\"";
@@ -14,11 +12,13 @@ public class ProcessedMsg {
     public String msgID;
     public String senderName;
     public String senderEmail;
+    public String replyTo;
     public String subject;
-    public String langID;
+    public String langCode;
+    public String messageId;
     public List<String> newsgroups = new ArrayList<>();
     public List<String> paragraphs = new ArrayList<>();
-    public LocalDate date;
+    public Date date;
 
     /**
      * empty constructor, elements are filled from outside. No setters (oooh!)
@@ -50,7 +50,7 @@ public class ProcessedMsg {
         elements.add(senderName);
         elements.add(senderEmail);
         elements.add(subject);
-        elements.add(langID);
+        elements.add(langCode);
         elements.add(concatenate(newsgroups));
         elements.add(concatenate(paragraphs));
         elements.add(date.toString());
@@ -58,10 +58,6 @@ public class ProcessedMsg {
         return elements.toString();
     }
 
-    /**
-     * function to get the names of the CSV fields
-     * @return
-     */
     public String getCSVHeader(){
         StringJoiner elements = new StringJoiner(SEPARATOR);
 
@@ -85,7 +81,7 @@ public class ProcessedMsg {
 
     /**
      * join a list with SEPARATOR and encapsulate it with ENCAPSULATOR
-     * @param someList
+     * @param someList of strings to concatenate
      * @return escaped and joined list
      */
     private static String concatenate(List<String> someList){
@@ -96,9 +92,7 @@ public class ProcessedMsg {
         }
 
         // replace the ENCAPSULATOR with a double version, after splitting up existing double versions
-        String result = elements.toString().replaceAll(DOUBLE_ENCAPSULATOR, ENCAPSULATOR + " " + ENCAPSULATOR).replaceAll(ENCAPSULATOR, DOUBLE_ENCAPSULATOR);
-
-        return result;
+        return elements.toString().replaceAll(DOUBLE_ENCAPSULATOR, ENCAPSULATOR + " " + ENCAPSULATOR).replaceAll(ENCAPSULATOR, DOUBLE_ENCAPSULATOR);
 
     }
 }
