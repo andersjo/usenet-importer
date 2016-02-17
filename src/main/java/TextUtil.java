@@ -1,5 +1,7 @@
 import java.util.ArrayList;
 import java.util.List;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 public class TextUtil {
 
@@ -74,5 +76,15 @@ public class TextUtil {
         }
 
         return out.toString();
+    }
+
+
+    public static boolean isQuoteHeader(String txt){
+        String re = "(^[OI]n.+@.+:$)";
+        Pattern p = Pattern.compile(re, Pattern.DOTALL);
+        Matcher m = p.matcher(txt);
+
+        return m.find() && txt.lastIndexOf('\n') == txt.indexOf('\n');
+
     }
 }
