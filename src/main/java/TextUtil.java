@@ -87,4 +87,11 @@ public class TextUtil {
         return m.find() && txt.lastIndexOf('\n') == txt.indexOf('\n');
 
     }
+
+
+    public static boolean isSPAM(String pieceOfSuspiciousLookingMeat){
+        // TODO
+        return false;
+    }
+
 }
