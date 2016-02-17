@@ -26,10 +26,10 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 public class MsgProcessor {
-    Set<Integer> paragraphHashes = new HashSet<>();
     List<String> unknownEncodings = new ArrayList<>();
     List<Predicate<String>> paragraphFilters = new ArrayList<>();
     LangIdV3 langid = new LangIdV3();
+
     public MsgProcessor(){
 
     }
