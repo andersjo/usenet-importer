@@ -1,4 +1,3 @@
-import com.sun.xml.internal.bind.v2.runtime.unmarshaller.XsiNilLoader;
 import org.apache.commons.cli.*;
 import org.apache.james.mime4j.dom.Message;
 
@@ -7,9 +6,7 @@ import java.nio.file.*;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.*;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
-import java.util.stream.StreamSupport;
+import java.util.function.Function;
 import java.util.zip.GZIPInputStream;
 
 public class UsenetImporter {
@@ -28,11 +25,13 @@ public class UsenetImporter {
 
     public static void main(String[] args) throws IOException, InterruptedException, ParseException {
         Options options = new Options();
-        options.addOption("mboxDir", true, "Directory of Mbox files");
-        options.addOption("outputCsv", true, "CSV file where output is written");
-        options.addOption("nThreads", false, "Number of threads to use. Default 4");
 
-
+        options.addOption(Option.builder("mboxDir").required().hasArg()
+                .desc("Directory of Mbox files").build());
+        options.addOption(Option.builder("outputCsv").required().hasArg()
+                .desc("CSV file where output is written").build());
+        options.addOption(Option.builder("nThreads").hasArg()
+                .desc("Number of threads to use. Default 4").build());
 
         CommandLineParser parser = new DefaultParser();
         CommandLine cmd = parser.parse(options, args);
@@ -43,6 +42,8 @@ public class UsenetImporter {
         }
 
         System.err.println("Running importer script with " + nThreads + " threads");
+        System.err.println("\toutputCsv: " + cmd.getOptionValue("outputCsv"));
+        System.err.println("\tmboxDir: " + cmd.getOptionValue("mboxDir"));
         UsenetImporter importer = new UsenetImporter(cmd.getOptionValue("outputCsv"), nThreads);
         Path mboxFilesDir = FileSystems.getDefault().getPath(cmd.getOptionValue("mboxDir"));
         importer.importDir(mboxFilesDir);
@@ -113,6 +114,7 @@ public class UsenetImporter {
             MsgProcessor msgProcessor = new MsgProcessor();
             msgProcessor.addParagraphFilter(hashingFilter::isNew);
             msgProcessor.addParagraphFilter(p -> p.length() > 5);
+            msgProcessor.addParagraphFilter(p -> !TextUtil.isQuoteHeader(p));
 
             return msgProcessor;
         }
