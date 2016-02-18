@@ -21,12 +21,12 @@ import java.util.stream.Stream;
 
 
 public class MsgProcessor {
-    List<String> unknownEncodings = new ArrayList<>();
-    List<Predicate<String>> paragraphFilters = new ArrayList<>();
-    LangIdV3 langid = new LangIdV3();
+    private List<String> unknownEncodings = new ArrayList<>();
+    private List<Predicate<String>> paragraphFilters = new ArrayList<>();
+    private LangIdV3 langid = new LangIdV3();
     private Pattern threeReplacementCharsPat = Pattern.compile("�{3}");
 
-    public MsgProcessor(){
+    public MsgProcessor() {
 
     }
 
@@ -39,6 +39,7 @@ public class MsgProcessor {
         try {
             String body = extractBody(message);
             body = threeReplacementCharsPat.matcher(body).replaceAll("�");
+            body = body.replace('\t', ' ');
             List<String> paragraphs = TextUtil.findParagraphs(TextUtil.stripQuotes(body));
 
             paragraphs = applyParagraphFilters(paragraphs);
