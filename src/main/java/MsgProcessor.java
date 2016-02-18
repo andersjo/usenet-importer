@@ -19,6 +19,7 @@ import java.util.stream.Collector;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+
 public class MsgProcessor {
     List<String> unknownEncodings = new ArrayList<>();
     List<Predicate<String>> paragraphFilters = new ArrayList<>();
