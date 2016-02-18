@@ -26,17 +26,23 @@ public class ProcessedMsg {
     public ProcessedMsg() {}
 
     public boolean isValid() {
-        return paragraphs.size() >= 1;
+        return paragraphs.size() > 0
+                && date != null
+                && senderName != null
+                && senderEmail != null
+                && subject != null
+                && langCode != null
+                && messageId != null
+                && newsgroups.size() > 0
+                ;
     }
-
-
 
 
     /**
      *
      * @return a concatenation of the fields, joined by SEPARATOR
      */
-    public String toCSV(){
+    public String csvRow(){
         StringJoiner elements = new StringJoiner(SEPARATOR);
 
         // assemble fields
@@ -44,7 +50,7 @@ public class ProcessedMsg {
         //*******   WARNING:   ******
         //***************************
         // if you change the order or add fields,
-        // change getCSVHeader() as well!
+        // change csvHeader() as well!
 
         elements.add(msgID);
         elements.add(senderName);
@@ -58,7 +64,7 @@ public class ProcessedMsg {
         return elements.toString();
     }
 
-    public String getCSVHeader(){
+    public static String csvHeader(){
         StringJoiner elements = new StringJoiner(SEPARATOR);
 
         // assemble fields
@@ -66,7 +72,7 @@ public class ProcessedMsg {
         //*******   WARNING:   ******
         //***************************
         // if you change the order or add fields,
-        // change toCSV() as well!
+        // change csvRow() as well!
         elements.add("msgID");
         elements.add("senderName");
         elements.add("senderEmail");

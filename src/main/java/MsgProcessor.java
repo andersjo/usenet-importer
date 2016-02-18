@@ -1,26 +1,20 @@
+import cmu.arktweetnlp.Twokenize;
 import com.carrotsearch.labs.langid.DetectedLanguage;
 import com.carrotsearch.labs.langid.LangIdV3;
-import com.sun.org.apache.xpath.internal.operations.Mult;
 import org.apache.james.mime4j.dom.*;
 import org.apache.james.mime4j.dom.address.Address;
 import org.apache.james.mime4j.dom.address.AddressList;
 import org.apache.james.mime4j.dom.address.Mailbox;
 import org.apache.james.mime4j.dom.address.MailboxList;
-import org.apache.james.mime4j.dom.field.AddressListField;
-import org.apache.james.mime4j.message.AbstractMessage;
-import org.apache.james.mime4j.message.MessageImpl;
 import org.apache.james.mime4j.stream.Field;
 import org.apache.james.mime4j.util.MimeUtil;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
-import java.time.LocalDate;
-import java.time.format.DateTimeFormatter;
-import java.time.format.DateTimeParseException;
 import java.util.*;
-import java.util.function.Function;
 import java.util.function.Predicate;
+import java.util.regex.Pattern;
 import java.util.stream.Collector;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -29,6 +23,7 @@ public class MsgProcessor {
     List<String> unknownEncodings = new ArrayList<>();
     List<Predicate<String>> paragraphFilters = new ArrayList<>();
     LangIdV3 langid = new LangIdV3();
+    private Pattern threeReplacementCharsPat = Pattern.compile("�{3}");
 
     public MsgProcessor(){
 
@@ -42,11 +37,18 @@ public class MsgProcessor {
         ProcessedMsg processedMsg = new ProcessedMsg();
         try {
             String body = extractBody(message);
+            body = threeReplacementCharsPat.matcher(body).replaceAll("�");
             List<String> paragraphs = TextUtil.findParagraphs(TextUtil.stripQuotes(body));
+
             paragraphs = applyParagraphFilters(paragraphs);
+            processedMsg.langCode = detectLanguage(paragraphs);
+
+            paragraphs = tokenize(paragraphs);
             processedMsg.paragraphs = paragraphs;
             extractFields(message, processedMsg);
-            processedMsg.langCode = detectLanguage(paragraphs);
+
+
+
         } catch (MessageProcessingError e) {
             return null;
         }
@@ -56,10 +58,20 @@ public class MsgProcessor {
 
     }
 
+    private List<String> tokenize(List<String> paragraphs) {
+        return paragraphs.stream()
+                .map(MsgProcessor::twokenize)
+                .collect(Collectors.toList());
+    }
+
+    private static String twokenize(String paragraph) {
+        return Twokenize.tokenize(paragraph).stream()
+                .collect(Collectors.joining(" "));
+    }
+
     private String detectLanguage(List<String> paragraphs) {
         if (paragraphs.size() == 0)
             return "unknown";
-
         try {
             paragraphs.stream().forEach(langid::append);
             DetectedLanguage detectedLanguage = langid.classify(false);

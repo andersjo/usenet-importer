@@ -1,7 +1,11 @@
+import java.io.ByteArrayOutputStream;
+import java.nio.CharBuffer;
 import java.util.ArrayList;
 import java.util.List;
 
 public class TextUtil {
+    static final CharBuffer INVALID_CHARS = CharBuffer.wrap(new char[]{239, 191, 189});
+    static final CharBuffer NULL_CHARS = CharBuffer.wrap(new char[]{0});
 
     private static void addTrimmedParagraph(StringBuilder paragraph, List<String> paragraphs) {
         if (paragraph.length() > 0) {
@@ -74,5 +78,42 @@ public class TextUtil {
         }
 
         return out.toString();
+    }
+
+    public static String replaceInvalidChar(String text) {
+        return text.replace(INVALID_CHARS, NULL_CHARS);
+
+    }
+
+    /**
+     * The providers of the newsgroup dump accidentally replaced
+     * all characters outside of the standard ascii range with
+     * the (signed) byte sequence 239 191 189.
+     *
+     * Every time we encounter such as sequence in the raw and undecoded
+     * data, it is replaced with a single NULL byte (\0).
+
+     */
+    static ByteArrayOutputStream replaceSpecialCharBytesWithNullByte(byte[] text) {
+        ByteArrayOutputStream output = new ByteArrayOutputStream();
+
+        int lastFound = 0;
+        for (int i = 0; i < text.length - 2; i++) {
+            if (text[i] == (byte) 239 && text[i+1] == (byte) 191 && text[i+1] == (byte) 189) {
+                if (i > 0)
+                    output.write(text, lastFound, i - lastFound - 1);
+                output.write(0);
+                // Skip over the last part of the byte sequence
+                i += 2;
+                lastFound = i + 1;
+            }
+        }
+
+        if (lastFound < text.length) {
+            output.write(text, lastFound, text.length - lastFound);
+        }
+
+        return output;
+
     }
 }

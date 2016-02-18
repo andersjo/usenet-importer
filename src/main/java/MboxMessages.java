@@ -1,17 +1,17 @@
 import org.apache.james.mime4j.dom.Message;
 import org.apache.james.mime4j.message.DefaultMessageBuilder;
+import org.apache.james.mime4j.stream.MimeConfig;
 
 import java.io.*;
 import java.util.Iterator;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
-/**
- * Created by anders on 09/02/2016.
- */
 public class MboxMessages implements Iterator<Message>, Iterable<Message> {
     BufferedInputStream instream;
     MboxContentHandler handler;
+
+    DefaultMessageBuilder messageBuilder = new DefaultMessageBuilder();
 
     Message nextMessage = null;
     ByteArrayOutputStream messageBytes = new ByteArrayOutputStream();
@@ -19,8 +19,12 @@ public class MboxMessages implements Iterator<Message>, Iterable<Message> {
     int numCalls = 0;
 
 
-    public MboxMessages(String filename) throws IOException {
-        instream = new BufferedInputStream(new FileInputStream(filename));
+    public MboxMessages(InputStream mbox) throws IOException {
+        MimeConfig mimeConfig = new MimeConfig();
+        mimeConfig.setMaxLineLen(10_000);
+        messageBuilder.setMimeEntityConfig(mimeConfig);
+
+        instream = new BufferedInputStream(mbox);
         // Read a single byte to prevent matching "From" on the first line
         instream.read();
         _fetchNext();
@@ -88,7 +92,6 @@ public class MboxMessages implements Iterator<Message>, Iterable<Message> {
 
     private Message parseMessage(InputStream messageInstream) {
         try {
-            DefaultMessageBuilder messageBuilder = new DefaultMessageBuilder();
             return messageBuilder.parseMessage(messageInstream);
         } catch (IOException e) {
             e.printStackTrace();
@@ -121,11 +124,11 @@ public class MboxMessages implements Iterator<Message>, Iterable<Message> {
     }
 
     public static void main(String[] args) throws IOException {
-        MboxMessages messages = new MboxMessages("/users/anders/downloads/alt.sports.basketball.nba.mbox");
-        Stream<Message> msgStream = StreamSupport.stream(messages.spliterator(), false);
-
-        System.out.println(msgStream.count());
-        System.out.println("NumCalls " + messages.numCalls);
+//        MboxMessages messages = new MboxMessages("/users/anders/downloads/alt.sports.basketball.nba.mbox");
+//        Stream<Message> msgStream = StreamSupport.stream(messages.spliterator(), false);
+//
+//        System.out.println(msgStream.count());
+//        System.out.println("NumCalls " + messages.numCalls);
     }
 
 }

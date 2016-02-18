@@ -24,4 +24,18 @@ public class TextUtilTest {
         assertEquals("abc def\n", TextUtil.stripQuotes(quotedText1));
 
     }
+
+    @Test
+    public void testReplaceInvalidChar() throws Exception {
+        StringBuilder builder = new StringBuilder();
+        builder.append("START ");
+        builder.append((char) 239);
+        builder.append((char) 191);
+        builder.append((char) 189);
+        builder.append(" END");
+
+
+        String replaced = TextUtil.replaceInvalidChar(builder.toString());
+        assertEquals("START \0 END", replaced);
+    }
 }
