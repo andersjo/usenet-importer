@@ -13,7 +13,7 @@ import java.util.zip.GZIPInputStream;
 
 public class UsenetImporter {
     ExecutorService executor;
-    final HashingFilter hashingFilter = new HashingFilter();
+    final HashingFilter hashingFilter = new BloomHashingFilter();
 
     final CSVPrinter csvOut;
     final AtomicLong docIdCounter = new AtomicLong();
