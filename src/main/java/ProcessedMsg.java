@@ -1,15 +1,9 @@
-import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
-import java.util.StringJoiner;
 
 public class ProcessedMsg {
-    private static final String SEPARATOR = "\t";
-    private static final String ENCAPSULATOR = "\"";
-    private static final String DOUBLE_ENCAPSULATOR = ENCAPSULATOR + ENCAPSULATOR;
-
-    public String msgID;
+    public String docId;
     public String senderName;
     public String senderEmail;
     public String replyTo;
@@ -19,6 +13,9 @@ public class ProcessedMsg {
     public List<String> newsgroups = new ArrayList<>();
     public List<String> paragraphs = new ArrayList<>();
     public Date date;
+
+    public static final String[] columns = {"docId", "messageId", "senderName", "senderEmail", "subject", "langID",
+            "newsgroups", "paragraphs", "date"};
 
     /**
      * empty constructor, elements are filled from outside. No setters (oooh!)
@@ -38,67 +35,20 @@ public class ProcessedMsg {
     }
 
 
-    /**
-     *
-     * @return a concatenation of the fields, joined by SEPARATOR
-     */
-    public String csvRow(){
-        StringJoiner elements = new StringJoiner(SEPARATOR);
+    public List<String> rowData() {
+        List<String> elements = new ArrayList<>();
 
-        // assemble fields
-        //***************************
-        //*******   WARNING:   ******
-        //***************************
-        // if you change the order or add fields,
-        // change csvHeader() as well!
-
-        elements.add(msgID);
+        elements.add(docId);
+        elements.add(messageId);
         elements.add(senderName);
         elements.add(senderEmail);
         elements.add(subject);
         elements.add(langCode);
-        elements.add(concatenate(newsgroups));
-        elements.add(concatenate(paragraphs));
+        elements.add(String.join(",", newsgroups));
+        elements.add(String.join("\u2029", paragraphs));
         elements.add(date.toString());
 
-        return elements.toString();
+        return elements;
     }
 
-    public static String csvHeader(){
-        StringJoiner elements = new StringJoiner(SEPARATOR);
-
-        // assemble fields
-        //***************************
-        //*******   WARNING:   ******
-        //***************************
-        // if you change the order or add fields,
-        // change csvRow() as well!
-        elements.add("msgID");
-        elements.add("senderName");
-        elements.add("senderEmail");
-        elements.add("subject");
-        elements.add("langID");
-        elements.add("newsgroups");
-        elements.add("paragraphs");
-        elements.add("date");
-
-        return elements.toString();
-    }
-
-    /**
-     * join a list with SEPARATOR and encapsulate it with ENCAPSULATOR
-     * @param someList of strings to concatenate
-     * @return escaped and joined list
-     */
-    private static String concatenate(List<String> someList){
-        StringJoiner elements = new StringJoiner(SEPARATOR, ENCAPSULATOR, ENCAPSULATOR);
-
-        for (String element: someList){
-            elements.add(element);
-        }
-
-        // replace the ENCAPSULATOR with a double version, after splitting up existing double versions
-        return elements.toString().replaceAll(DOUBLE_ENCAPSULATOR, ENCAPSULATOR + " " + ENCAPSULATOR).replaceAll(ENCAPSULATOR, DOUBLE_ENCAPSULATOR);
-
-    }
 }

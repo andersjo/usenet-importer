@@ -1,4 +1,6 @@
 import org.apache.commons.cli.*;
+import org.apache.commons.csv.CSVFormat;
+import org.apache.commons.csv.CSVPrinter;
 import org.apache.james.mime4j.dom.Message;
 
 import java.io.*;
@@ -6,21 +8,25 @@ import java.nio.file.*;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.*;
-import java.util.function.Function;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.zip.GZIPInputStream;
 
 public class UsenetImporter {
-    boolean headerWritten = false;
-    final BufferedWriter outFile;
     ExecutorService executor;
     final HashingFilter hashingFilter = new HashingFilter();
 
+    final CSVPrinter csvOut;
+    final AtomicLong docIdCounter = new AtomicLong();
 
 
     public UsenetImporter(String outputFile, int nThreads) throws IOException {
         Path outputPath = Paths.get(outputFile);
-        outFile = Files.newBufferedWriter(outputPath);
+        BufferedWriter outFile = Files.newBufferedWriter(outputPath);
         executor = Executors.newFixedThreadPool(nThreads);
+
+        CSVFormat csvFormat = CSVFormat.DEFAULT.withDelimiter('\t').withHeader(ProcessedMsg.columns);
+        csvOut = csvFormat.print(outFile);
+
     }
 
     public static void main(String[] args) throws IOException, InterruptedException, ParseException {
@@ -52,7 +58,7 @@ public class UsenetImporter {
 
 
     public void importDir(Path dir) throws IOException, InterruptedException {
-        if (!headerWritten) writeCsvHeader();
+//        if (!headerWritten) writeCsvHeader();
 
         // Queue all files
         DirectoryStream<Path> mboxFiles = Files.newDirectoryStream(dir);
@@ -76,15 +82,16 @@ public class UsenetImporter {
 
     void close() throws IOException {
         executor.shutdown();
-        outFile.close();
+        csvOut.close();
     }
 
 
-    private void writeCsvHeader() throws IOException {
-        outFile.write(ProcessedMsg.csvHeader());
-        outFile.newLine();
-        headerWritten = true;
-    }
+//    private void writeCsvHeader() throws IOException {
+//        csvFormat.print(outFile)
+//        outFile.write(ProcessedMsg.csvHeader());
+//        outFile.newLine();
+//        headerWritten = true;
+//    }
 
     private class SingleMboxImporter implements Callable<Boolean> {
         Path mboxFile;
@@ -99,11 +106,12 @@ public class UsenetImporter {
             System.out.println("Importing " + mboxFile.getFileName());
             MboxMessages messages = new MboxMessages(openInputStream());
             for (Message message : messages) {
+                String messageId = Long.toString(docIdCounter.incrementAndGet());
                 ProcessedMsg processedMessage = msgProcessor.process(message);
+                processedMessage.docId = messageId;
                 if (processedMessage.isValid()) {
-                    synchronized (outFile) {
-                        outFile.write(processedMessage.csvRow());
-                        outFile.newLine();
+                    synchronized (csvOut) {
+                        csvOut.printRecord(processedMessage.rowData());
                     }
                 }
             }

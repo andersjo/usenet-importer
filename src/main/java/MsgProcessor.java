@@ -189,7 +189,7 @@ public class MsgProcessor {
             Field newsgroupField = newsgroupFields.get(0);
 
             String newsgroupsList = MimeUtil.unfold(newsgroupField.getBody());
-            return Arrays.asList(newsgroupsList.split(","));
+            return Arrays.asList(newsgroupsList.split(" *, *"));
         }
 
         return Collections.<String>emptyList();
