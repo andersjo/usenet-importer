@@ -6,16 +6,26 @@ import org.apache.james.mime4j.dom.address.Address;
 import org.apache.james.mime4j.dom.address.AddressList;
 import org.apache.james.mime4j.dom.address.Mailbox;
 import org.apache.james.mime4j.dom.address.MailboxList;
+import org.apache.james.mime4j.dom.datetime.DateTime;
+import org.apache.james.mime4j.field.datetime.parser.DateTimeParser;
+import org.apache.james.mime4j.field.datetime.parser.ParseException;
+import org.apache.james.mime4j.field.datetime.parser.TokenMgrError;
 import org.apache.james.mime4j.stream.Field;
 import org.apache.james.mime4j.util.MimeUtil;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.io.StringReader;
 import java.io.UnsupportedEncodingException;
-import java.util.*;
+import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
 import java.util.function.Predicate;
+import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-import java.util.stream.Collector;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -48,8 +58,6 @@ public class MsgProcessor {
             paragraphs = tokenize(paragraphs);
             processedMsg.paragraphs = paragraphs;
             extractFields(message, processedMsg);
-
-
 
         } catch (MessageProcessingError e) {
             return null;
@@ -175,10 +183,54 @@ public class MsgProcessor {
         }
 
         processedMessage.subject = message.getSubject();
-        processedMessage.date = message.getDate();
+        processedMessage.date = parseComplexDateTime(message);
+        if (processedMessage.date == null) {
+            processedMessage.date = parseSimpleDateTime(message);
+        }
 
         processedMessage.messageId = message.getMessageId();
         processedMessage.newsgroups = extractNewsgroups(message);
+    }
+
+    private OffsetDateTime parseSimpleDateTime(Message message) {
+        String body = message.getHeader().getField("Date").getBody();
+
+        Pattern simpleDatePattern = Pattern.compile("(\\d{4})/(\\d{2})/(\\d{2})");
+        Matcher matcher = simpleDatePattern.matcher(body);
+        if (matcher.matches()) {
+            int year = Integer.parseInt(matcher.group(1));
+            int month = Integer.parseInt(matcher.group(2));
+            int day = Integer.parseInt(matcher.group(3));
+            return OffsetDateTime.of(year, month, day, 0, 0, 0, 0, ZoneOffset.UTC);
+        }
+        return null;
+    }
+
+    private OffsetDateTime parseComplexDateTime(Message message) {
+        String body = message.getHeader().getField("Date").getBody();
+        try {
+            DateTime jmimeDateTime = new DateTimeParser(new StringReader(body)).parseAll();
+            int offsetMinutes = 0;
+            int offsetHours = 0;
+
+            // The DateTime class is not well documented. From reading the source it seems that the
+            // offset in minutes can be retrieved from the timezone value as below:
+            if (jmimeDateTime.getTimeZone() != Integer.MIN_VALUE) {
+                offsetMinutes = ((jmimeDateTime.getTimeZone() / 100) * 60) + jmimeDateTime.getTimeZone() % 100;
+
+                offsetHours = offsetMinutes / 60;
+                offsetMinutes = offsetMinutes % 60;
+            }
+
+            return OffsetDateTime.of(jmimeDateTime.getYear(), jmimeDateTime.getMonth(), jmimeDateTime.getDay(),
+                    jmimeDateTime.getHour(), jmimeDateTime.getMinute(), jmimeDateTime.getSecond(), 0,
+                    ZoneOffset.ofHoursMinutes(offsetHours, offsetMinutes));
+
+        } catch (ParseException | java.time.DateTimeException | TokenMgrError ignored) {
+
+        }
+        return null;
+
 
     }
 

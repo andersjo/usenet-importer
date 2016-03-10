@@ -95,6 +95,11 @@ public class MboxMessages implements Iterator<Message>, Iterable<Message> {
             return messageBuilder.parseMessage(messageInstream);
         } catch (IOException e) {
             e.printStackTrace();
+        } catch (NullPointerException e) {
+            // Ignore a parsing error that happens inside of the Apache mime parser.
+            if (!e.getStackTrace()[0].getClassName().equals("org.apache.james.mime4j.io.MimeBoundaryInputStream")) {
+                e.printStackTrace();
+            }
         }
         return null;
     }

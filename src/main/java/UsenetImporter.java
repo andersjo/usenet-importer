@@ -74,7 +74,9 @@ public class UsenetImporter {
             try {
                 future.get();
             } catch (ExecutionException e) {
-                e.printStackTrace();
+                Throwable cause = e.getCause();
+                if (cause != null)
+                    cause.printStackTrace();
             }
 
         }
@@ -102,20 +104,25 @@ public class UsenetImporter {
 
         @Override
         public Boolean call() throws Exception {
-            MsgProcessor msgProcessor = setupMsgProcessor();
-            System.out.println("Importing " + mboxFile.getFileName());
-            MboxMessages messages = new MboxMessages(openInputStream());
-            for (Message message : messages) {
-                String messageId = Long.toString(docIdCounter.incrementAndGet());
-                ProcessedMsg processedMessage = msgProcessor.process(message);
-                processedMessage.docId = messageId;
-                if (processedMessage.isValid()) {
-                    synchronized (csvOut) {
-                        csvOut.printRecord(processedMessage.rowData());
+            try {
+                MsgProcessor msgProcessor = setupMsgProcessor();
+                MboxMessages messages = new MboxMessages(openInputStream());
+                for (Message message : messages) {
+                    String messageId = Long.toString(docIdCounter.incrementAndGet());
+                    ProcessedMsg processedMessage = msgProcessor.process(message);
+                    processedMessage.docId = messageId;
+                    if (processedMessage.isValid()) {
+                        synchronized (csvOut) {
+                            csvOut.printRecord(processedMessage.rowData());
+                        }
                     }
                 }
+                return true;
+            } catch (Exception e) {
+                System.err.println("Encountering exception while processing " + mboxFile.getFileName().toString());
+                e.printStackTrace();
+                throw e;
             }
-            return true;
         }
 
         private MsgProcessor setupMsgProcessor() {
